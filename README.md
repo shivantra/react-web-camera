@@ -1,4 +1,4 @@
-# WebCamera React Component 📸
+# React Web Camera Component 📸
 
 A lightweight and flexible React component for capturing images from the user’s camera (front or back) with support for `jpeg`, `png`, and `webp` formats. Built with modern React (`hooks` + `forwardRef`) and works on both desktop and mobile browsers.
 
