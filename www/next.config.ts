@@ -1,8 +1,16 @@
 import type { NextConfig } from "next";
+import withPWAInit from "@ducanh2912/next-pwa";
 
 const isProd = process.env.NODE_ENV === "production";
 
-const nextConfig: NextConfig = {
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  disable: !isProd,
+  scope: "/react-web-camera/",
+});
+
+const config: NextConfig = {
   output: "export",
 
   basePath: "/react-web-camera",
@@ -14,4 +22,4 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
 };
 
-export default nextConfig;
+export default withPWA(config);

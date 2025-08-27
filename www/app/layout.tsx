@@ -65,6 +65,7 @@ export const metadata: Metadata = {
       "React component to access the browser camera, capture images, and switch between cameras.",
     images: [absolute(`${basePath}/og/preview.png`)],
   },
+  manifest: absolute(`${basePath}/manifest.json`),
 };
 
 export default function RootLayout({
