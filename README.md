@@ -1,8 +1,8 @@
-# React Web Camera Component 📸
+# React Web Camera
 
 A lightweight and flexible React component for capturing images from the user’s camera (front or back) with support for `jpeg`, `png`, and `webp` formats. Built with modern React (`hooks` + `forwardRef`) and works on both desktop and mobile browsers.
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Why?](#why-)
 - [Our Solution](#our-solution-)
@@ -21,7 +21,7 @@ A lightweight and flexible React component for capturing images from the user’
 
 ---
 
-## Why? ❓
+## Why?
 
 Capturing multiple images from a webcam is a common need in modern web apps, especially Progressive Web Apps (PWAs).
 Existing solutions are often:
@@ -43,7 +43,7 @@ This creates a poor user experience for apps needing **multi-photo sessions** (f
 
 ---
 
-## Our Solution 💡
+## Our Solution
 
 `react-web-camera` provides a headless, platform-independent React component that gives you full control over your UI. It handles the complex logic of accessing the webcam, capturing multiple images, and managing state, while you focus on styling and user experience.
 
@@ -55,7 +55,7 @@ This makes it:
 
 ---
 
-## Features ✨
+## Features
 
 - **📷 Front & Back Camera Support** – Easily capture images from both cameras.
 - **🖼 Multiple Image Formats** – Export images as jpeg, png, or webp.
@@ -68,22 +68,26 @@ This makes it:
 
 ---
 
-## Installation 📦
+## Installation
 
 ```bash
 # If using npm
 npm install @shivantra/react-web-camera
+```
 
+```bash
 # Or with yarn
 yarn add @shivantra/react-web-camera
+```
 
+```bash
 # Or with pnpm
 pnpm add @shivantra/react-web-camera
 ```
 
 ---
 
-## Usage 🛠
+## Usage
 
 - **Basic Example**
 
@@ -228,7 +232,7 @@ export default function PWAApp() {
 
 ---
 
-## Ref Methods 🖐
+## Ref Methods
 
 Access these methods via `ref`:
 
@@ -240,7 +244,7 @@ Access these methods via `ref`:
 
 ---
 
-## Notes ⚠️
+## Notes
 
 - On mobile devices, some browsers may require HTTPS to access the camera.
 - Ensure the user grants camera permissions; otherwise, the component will throw an error.
@@ -248,13 +252,13 @@ Access these methods via `ref`:
 
 ---
 
-## License 📄
+## License
 
 MIT License © 2025 Shivantra Solutions Private Limited
 
 ---
 
-## Contact 📧
+## Contact
 
 For more details about our projects, services, or any general information regarding **react-web-camera**, feel free to reach out to us. We are here to provide support and answer any questions you may have. Below are the best ways to contact our team:
 
