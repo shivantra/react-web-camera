@@ -38,6 +38,7 @@ export type WebCameraHandler = {
   capture: () => Promise<File | null>;
   switch: (facingMode?: FacingMode) => Promise<void>;
   getMode: () => CaptureMode;
+  stop: () => void;
 };
 
 const CAPTURE_MODES: Record<CaptureMode, FacingMode> = {
@@ -108,11 +109,15 @@ export const WebCamera = forwardRef<WebCameraHandler, WebCameraProps>(
       });
     }, [captureType, captureQuality, getFileName]);
 
-    const switchCamera = useCallback(async () => {
+    const stopCamera = useCallback(() => {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
         if (videoRef.current) videoRef.current.srcObject = null;
       }
+    }, [stream]);
+
+    const switchCamera = useCallback(async () => {
+      stopCamera();
 
       const newFacingMode = facingMode === "user" ? "environment" : "user";
       setFacingMode(newFacingMode);
@@ -142,16 +147,17 @@ export const WebCamera = forwardRef<WebCameraHandler, WebCameraProps>(
       } catch (err) {
         onError?.(err as Error);
       }
-    }, [stream, facingMode, devices, onError]);
+    }, [stopCamera, facingMode, devices, onError]);
 
     useImperativeHandle(
       ref,
       () => ({
         capture: captureImage,
+        stop: stopCamera,
         switch: switchCamera,
         getMode: () => (facingMode === "environment" ? "back" : "front"),
       }),
-      [facingMode, captureImage, switchCamera],
+      [facingMode, captureImage, stopCamera, switchCamera],
     );
     
     useEffect(() => {
