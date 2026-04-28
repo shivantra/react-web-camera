@@ -46,6 +46,20 @@ const CAPTURE_MODES: Record<CaptureMode, FacingMode> = {
   front: "user",
 };
 
+function releaseStream(
+  stream: MediaStream | null,
+  video: HTMLVideoElement | null,
+) {
+  if (stream) {
+    for (const track of stream.getTracks()) {
+      track.stop();
+    }
+  }
+  if (video) {
+    video.srcObject = null;
+  }
+}
+
 export const WebCamera = forwardRef<WebCameraHandler, WebCameraProps>(
   (
     {
@@ -63,11 +77,21 @@ export const WebCamera = forwardRef<WebCameraHandler, WebCameraProps>(
   ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [stream, setStream] = useState<MediaStream | null>(null);
+    // streamRef mirrors the live MediaStream synchronously so stop() and the
+    // effect cleanup always see the current stream — even one that resolved
+    // a moment ago and hasn't been committed to React state yet.
+    const streamRef = useRef<MediaStream | null>(null);
+    // Stable handle for onError so consumers passing inline `onError={(e) => ...}`
+    // don't cause the init effect to tear down + reopen the camera every render.
+    const onErrorRef = useRef(onError);
     const [facingMode, setFacingMode] = useState<FacingMode>(
       CAPTURE_MODES[captureMode],
     );
-    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+    const [stopped, setStopped] = useState(false);
+
+    useEffect(() => {
+      onErrorRef.current = onError;
+    }, [onError]);
 
     const captureImage = useCallback(async () => {
       const video = videoRef.current;
@@ -110,44 +134,25 @@ export const WebCamera = forwardRef<WebCameraHandler, WebCameraProps>(
     }, [captureType, captureQuality, getFileName]);
 
     const stopCamera = useCallback(() => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        if (videoRef.current) videoRef.current.srcObject = null;
-      }
-    }, [stream]);
+      releaseStream(streamRef.current, videoRef.current);
+      streamRef.current = null;
+      // Persist the stopped state so the init effect doesn't immediately
+      // reopen the camera on the next render. switch() / a remount clears it.
+      setStopped(true);
+    }, []);
 
-    const switchCamera = useCallback(async () => {
-      stopCamera();
-
-      const newFacingMode = facingMode === "user" ? "environment" : "user";
-      setFacingMode(newFacingMode);
-
-      try {
-        let constraints: MediaStreamConstraints;
-
-        // fallback: if facingMode not supported, use deviceId
-        if (devices.length >= 2) {
-          const device = devices.find((d) =>
-            newFacingMode === "user"
-              ? d.label.toLowerCase().includes("front")
-              : d.label.toLowerCase().includes("back"),
-          );
-
-          constraints = device
-            ? { video: { deviceId: { exact: device.deviceId } } }
-            : { video: { facingMode: { ideal: newFacingMode } } };
-        } else {
-          constraints = { video: { facingMode: { ideal: newFacingMode } } };
-        }
-
-        const newStream =
-          await navigator.mediaDevices.getUserMedia(constraints);
-        if (videoRef.current) videoRef.current.srcObject = newStream;
-        setStream(newStream);
-      } catch (err) {
-        onError?.(err as Error);
-      }
-    }, [stopCamera, facingMode, devices, onError]);
+    const switchCamera = useCallback(
+      async (next?: FacingMode) => {
+        const newFacingMode =
+          next ?? (facingMode === "user" ? "environment" : "user");
+        // Clearing `stopped` and updating `facingMode` are batched into a
+        // single re-render; the init effect then runs once with the new
+        // facing mode.
+        setStopped(false);
+        setFacingMode(newFacingMode);
+      },
+      [facingMode],
+    );
 
     useImperativeHandle(
       ref,
@@ -159,41 +164,66 @@ export const WebCamera = forwardRef<WebCameraHandler, WebCameraProps>(
       }),
       [facingMode, captureImage, stopCamera, switchCamera],
     );
-    
-    useEffect(() => {
-      let mediaStream: MediaStream;
 
+    useEffect(() => {
+      if (stopped) return;
+
+      let cancelled = false;
       const video = videoRef.current;
 
       const initCamera = async () => {
         try {
-          // enumerate devices (helps iOS Safari + others)
+          // enumerate devices (helps iOS Safari + others); use device IDs when
+          // labels are available so switching is more reliable.
           const allDevices = await navigator.mediaDevices.enumerateDevices();
-          setDevices(allDevices.filter((d) => d.kind === "videoinput"));
+          if (cancelled) return;
+          const videoInputs = allDevices.filter((d) => d.kind === "videoinput");
 
-          mediaStream = await navigator.mediaDevices.getUserMedia({
+          let constraints: MediaStreamConstraints = {
             video: { facingMode: { ideal: facingMode } },
-          });
+          };
+          if (videoInputs.length >= 2) {
+            const device = videoInputs.find((d) =>
+              facingMode === "user"
+                ? d.label.toLowerCase().includes("front")
+                : d.label.toLowerCase().includes("back"),
+            );
+            if (device) {
+              constraints = {
+                video: { deviceId: { exact: device.deviceId } },
+              };
+            }
+          }
 
+          const mediaStream =
+            await navigator.mediaDevices.getUserMedia(constraints);
+
+          if (cancelled) {
+            // The effect was torn down (unmount, dep change, or stop()) while
+            // getUserMedia was pending. Release the orphan stream immediately
+            // — otherwise the camera LED stays on with no one to stop it.
+            releaseStream(mediaStream, null);
+            return;
+          }
+
+          streamRef.current = mediaStream;
           if (video) {
             video.srcObject = mediaStream;
             video.onloadedmetadata = () => video?.play();
           }
-          setStream(mediaStream);
         } catch (err) {
-          onError?.(err as Error);
+          if (!cancelled) onErrorRef.current?.(err as Error);
         }
       };
 
       initCamera();
 
       return () => {
-        mediaStream?.getTracks().forEach((track) => track.stop());
-        if (video) {
-          video.srcObject = null;
-        }
+        cancelled = true;
+        releaseStream(streamRef.current, video);
+        streamRef.current = null;
       };
-    }, [facingMode, onError]);
+    }, [facingMode, stopped]);
 
     return (
       <div className={className} style={style}>

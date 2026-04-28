@@ -59,6 +59,7 @@ export function ImageCaptureDialogDesktop({
       });
 
       setImages([]);
+      cameraRef.current?.stop();
       onOpenChange?.();
     } catch (error) {
       console.error("Failed to save images:", error);
@@ -83,6 +84,9 @@ export function ImageCaptureDialogDesktop({
       }
     }
     setImages([]);
+    // Release the camera so the device LED turns off and the hardware is
+    // available to other components / tabs.
+    cameraRef.current?.stop();
     onOpenChange?.();
   };
 
