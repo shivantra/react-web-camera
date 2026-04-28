@@ -1,6 +1,6 @@
 {
   "name": "@shivantra/react-web-camera",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Web camera component for React (by Shivantra)",
   "license": "MIT",
   "sideEffects": false,
